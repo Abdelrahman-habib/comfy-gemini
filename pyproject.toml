@@ -1,0 +1,14 @@
+[project]
+name = "comfy-gemini"
+description = "Use gemini to describe images, enhance prompts, etc."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["google-genai", "numpy", "requests", "pillow"]
+
+[project.urls]
+Repository = "https://github.com/abdelrahman-habib/comfy-gemini"
+
+[tool.comfy]
+PublisherId = "thom-forke"
+DisplayName = "Comfy Gemini"
+Icon = ""

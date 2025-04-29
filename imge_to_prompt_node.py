@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 from google import genai
 from google.genai import types, Client
@@ -20,13 +21,13 @@ class GeminiImageToPrompt:
             "required": {
                 "image": ("IMAGE",),
                 "model": (["gemini-1.5-pro-latest", "gemini-2.0-flash-exp"],),
-                "api_key": ("STRING", {
-                    "default": "",
+            },
+            "optional": {
+                 "api_key": ("STRING", {
+                    "default": os.environ.get('GEMINI_API_KEY', ''),
                     "multiline": False,
                     "password": True
                 }),
-            },
-            "optional": {
                  "prompt_template": ("STRING", {
                     "default": DEFAULT_PROMPT,
                     "multiline": True
@@ -39,14 +40,23 @@ class GeminiImageToPrompt:
     FUNCTION = "process_image"
     CATEGORY = "Gemini/Image"
 
-    def get_client(self, api_key):
-        """Get or create Gemini client"""
-        if self._client and self._current_api_key != api_key:
+    def get_client(self, api_key=None): 
+        """Get or create Gemini client, checking input and environment variable."""
+        
+        key_to_use = api_key if api_key else os.environ.get('GEMINI_API_KEY')
+
+        if not key_to_use:
+             # Handle missing API key after checking both sources
+            raise ValueError("API key is required. Provide it in the node input or set the GEMINI_API_KEY environment variable.")
+
+        # Check if client needs reset (key changed)
+        if self._client and self._current_api_key != key_to_use:
             self._client = None
 
+        # Create client if needed
         if not self._client:
-            self._client = genai.Client(api_key=api_key)
-            self._current_api_key = api_key
+            self._client = genai.Client(api_key=key_to_use)
+            self._current_api_key = key_to_use
 
         return self._client
     
@@ -80,7 +90,7 @@ class GeminiImageToPrompt:
             print(f"API error: {str(e)}")
             return f"Error: API request failed - {str(e)}"
 
-    def process_image(self, image, model, api_url, api_key, prompt_template):
+    def process_image(self, image, model, prompt_template, api_key=None):
         try:
             # Convert the first image in bytes
             if len(image.shape) == 4:
