@@ -1,0 +1,4 @@
+google-genai==1.11.0
+numpy
+requests
+pillow
