@@ -5,7 +5,7 @@ from google.genai import types, Client
 import numpy as np
 from PIL import Image
 
-from defaults import DEFAULT_PROMPT
+from .defaults import DEFAULT_PROMPT
 
 
 class GeminiImageToPrompt:
