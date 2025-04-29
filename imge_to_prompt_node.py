@@ -14,15 +14,27 @@ class GeminiImageToPrompt:
         self.type = "output"
         self._client: Client|None = None
         self._current_api_key = None
-
+        self.models = []
+        # if api key exits in environment, use it
+        if os.environ.get('GEMINI_API_KEY'):
+            self._client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
+            self._current_api_key = os.environ.get('GEMINI_API_KEY')
+            self.models = [model.name for model in self._client.models.list() if "generateContent" in (model.supported_actions or [])] 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "image": ("IMAGE",),
-                "model": (["gemini-1.5-pro-latest", "gemini-2.0-flash-exp"],),
+                "model": ("STRING", {
+                    "default": "gemini-2.0-flash",
+                    "multiline": False,
+                    "password": True
+                }),
             },
             "optional": {
+                "active": ("BOOLEAN", {
+                    "default": True
+                }),
                  "api_key": ("STRING", {
                     "default": os.environ.get('GEMINI_API_KEY', ''),
                     "multiline": False,
@@ -57,7 +69,8 @@ class GeminiImageToPrompt:
         if not self._client:
             self._client = genai.Client(api_key=key_to_use)
             self._current_api_key = key_to_use
-
+            # Update available models
+            self.models = [model.name for model in self._client.models.list() if "generateContent" in (model.supported_actions or [])]
         return self._client
     
     @staticmethod
@@ -90,7 +103,10 @@ class GeminiImageToPrompt:
             print(f"API error: {str(e)}")
             return f"Error: API request failed - {str(e)}"
 
-    def process_image(self, image, model, prompt_template, api_key=None):
+    def process_image(self, image, model, active, prompt_template, api_key=None):
+        if not active:
+            print("Gemini Image To Prompt node is disabled.")
+            return ("",)
         try:
             # Convert the first image in bytes
             if len(image.shape) == 4:
@@ -99,6 +115,8 @@ class GeminiImageToPrompt:
 
             # Process using Gemini api
             client = self.get_client(api_key)
+            if model not in self.models:
+                raise ValueError(f"Model {model} not found in available models:\n{self.models}")
             description = self.describe_image(prompt_template, image_bytes, client, model)
 
             return (description,)
